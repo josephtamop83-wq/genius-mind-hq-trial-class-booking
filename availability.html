@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>HQ Open Dates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+.dayc{padding:12px 14px}
+.dayc h4{margin:0 0 6px;font-size:15px}
+.trow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px dashed var(--line)}
+.trow .tl{flex:1;font-weight:700;font-size:14px}
+.trow select{width:auto;min-width:110px;padding:7px 8px}
+.trow .bk{font-size:12px;color:var(--muted);min-width:70px;text-align:right}
+.trow.open .tl{color:var(--ok)}
+.trow.chg{background:#fff8e0}
+.wk{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 12px}
+.wk b{font-size:15px}
+.times span{display:inline-flex;align-items:center;gap:6px;background:#f4effb;border-radius:999px;padding:4px 10px;margin:3px;font-weight:700;font-size:13px}
+.times button{border:0;background:none;color:var(--bad);cursor:pointer;font-size:14px}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row2 input,.row2 select{width:auto}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main id="app"></main>
+<div class="bar" id="bar" hidden><div class="in"><span id="cnt" style="align-self:center;font-size:13px;color:var(--muted)"></span><button class="btn pri" id="save">Save 保存</button></div></div>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="staff.js"></script>
+<script>
+var WEEKS = 26;   // shows about 6 months ahead, moving forward automatically
+var S = { authed: false, busy: false, err: '', msg: '', saved: false, times: [], cap: {}, booked: {}, edit: {}, week: 0 };
+var app = document.getElementById('app');
+document.getElementById('hdr').innerHTML = staffHeader('Open dates 开放日期');
+function key(d, t) { return d + '|' + t; }
+function monday() { var k = myToday(), w = weekday(k); return addDays(k, w === 0 ? -6 : 1 - w); }
+function curCap(k) { return k in S.edit ? S.edit[k] : (S.cap[k] || 0); }
+function allTimes() {
+  var seen = {}; S.times.forEach(function (x) { seen[x] = 1; });
+  Object.keys(S.cap).concat(Object.keys(S.booked)).forEach(function (k) { var p = k.split('|'); if ((S.cap[k] > 0 || S.booked[k]) && !seen[p[1]]) seen[p[1]] = 1; });
+  return Object.keys(seen).sort();
+}
+function render() {
+  if (!S.authed) { app.innerHTML = loginHtml(S.err); bindLogin(load); document.getElementById('bar').hidden = true; return; }
+  var start = addDays(monday(), S.week * 7), today = myToday(), times = allTimes();
+  var h = '<div class="head"><h2>Open dates 开放日期</h2><p>Each Trial Class is 1.5 hours. Choose how many parents each time can take (0 = closed). 每节 1.5 小时，选择每个时段可收几位家长（0 = 不开放）。</p></div>';
+  if (!S.saved) h += '<div class="note">Nothing is open to parents until you save here for the first time. 第一次保存之前，家长看不到任何日期。</div>';
+  h += '<div class="card"><b>Class start times 上课开始时间</b><div class="times">' + S.times.map(function (x) { return '<span>' + slotLabel(x) + '<button data-deltime="' + x + '" title="Remove">✕</button></span>'; }).join('') + '</div>' +
+    '<div class="row2" style="margin-top:6px"><input type="time" id="newtime" step="900"><button class="btn sec2" id="addtime" style="flex:none;padding:9px 14px">+ Add time 添加时间</button></div>' +
+    '<p class="hint">Removing a time here only hides it from this list; open slots stay open until you set them to 0. 删除只是从列表隐藏，已开放的时段要设为 0 才会关闭。</p></div>';
+  h += '<div class="card"><b>Copy this week 复制本周</b><div class="row2" style="margin-top:6px">to the next 到接下来 <select id="copyn">' + [1, 2, 3, 4, 6, 8, 12].map(function (n) { return '<option>' + n + '</option>'; }).join('') + '</select> weeks 周 <button class="btn sec2" id="copy" style="flex:none;padding:9px 14px">Copy 复制</button></div>' +
+    '<p class="hint">Copies the numbers shown below (same weekday, same times). Times that already have more bookings are skipped. 按星期几复制；已有更多预约的时段不会被改小。</p></div>';
+  h += '<div class="wk"><button class="nav" data-wk="-1"' + (S.week <= 0 ? ' disabled' : '') + '>‹</button><b>' + fmtD(start) + ' – ' + fmtD(addDays(start, 6)) + '</b><button class="nav" data-wk="1"' + (S.week >= WEEKS - 1 ? ' disabled' : '') + '>›</button></div>';
+  if (S.msg) h += '<div class="note info">' + esc(S.msg) + '</div>';
+  if (S.err) h += '<div class="msg">' + esc(S.err) + '</div>';
+  for (var i = 0; i < 7; i++) {
+    var d = addDays(start, i), past = d < today;
+    h += '<div class="card dayc"><h4>' + fmtD(d) + (past ? ' · past 已过' : '') + '</h4>';
+    if (!times.length) h += '<div class="hint">Add a start time above first. 请先添加上课时间。</div>';
+    times.forEach(function (tm) {
+      var k = key(d, tm), c = curCap(k), b = S.booked[k] || 0, opts = '';
+      for (var n = 0; n <= 5; n++) opts += '<option value="' + n + '"' + (n === c ? ' selected' : '') + (n < b ? ' disabled' : '') + '>' + (n ? n + ' parent' + (n > 1 ? 's' : '') + ' 位' : 'Closed 关') + '</option>';
+      h += '<div class="trow' + (c > 0 ? ' open' : '') + (k in S.edit ? ' chg' : '') + '"><span class="tl">' + slotLabel(tm) + '</span><select data-k="' + k + '"' + (past ? ' disabled' : '') + '>' + opts + '</select><span class="bk">' + (b ? b + ' booked 已订' : '') + '</span></div>';
+    });
+    h += '</div>';
+  }
+  app.innerHTML = h;
+  var n = Object.keys(S.edit).length, bar = document.getElementById('bar');
+  bar.hidden = false; document.getElementById('cnt').textContent = n ? n + ' change(s) not saved 未保存' : (S.saved ? 'All saved 已保存' : '');
+  document.getElementById('save').disabled = S.busy || (!n && S.saved);
+  document.getElementById('save').textContent = S.busy ? 'Saving… 保存中' : 'Save 保存';
+}
+function apply(j) {
+  S.cap = {}; S.booked = {}; S.saved = j.saved; if (!S.timesTouched) S.times = j.times || [];
+  (j.slots || []).forEach(function (s) { var k = key(s.d, s.t); S.cap[k] = s.cap; if (s.booked) S.booked[k] = s.booked; });
+}
+function load() {
+  S.authed = true; S.busy = true; app.innerHTML = '<div class="card">Loading… 载入中</div>';
+  sapi({ action: 'staff_avail' }, function (j) {
+    S.busy = false;
+    if (j && j.ok) { apply(j); S.err = ''; } else { S.err = errText(j); if (j && /auth|locked|disabled/.test(j.error)) S.authed = false; }
+    render();
+  });
+}
+function setCell(k, n) { if ((S.cap[k] || 0) === n) delete S.edit[k]; else S.edit[k] = n; }
+document.addEventListener('change', function (e) {
+  var el = e.target; if (el.dataset.k) { setCell(el.dataset.k, +el.value); S.msg = ''; render(); }
+});
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('button'); if (!el || el.disabled || !S.authed) return;
+  if (el.dataset.wk) { S.week += +el.dataset.wk; render(); return; }
+  if (el.dataset.deltime) { S.times = S.times.filter(function (x) { return x !== el.dataset.deltime; }); S.timesTouched = true; S.edit._times = 1; render(); return; }
+  if (el.id === 'addtime') {
+    var v = document.getElementById('newtime').value; if (!/^\d{2}:\d{2}$/.test(v)) return;
+    if (S.times.indexOf(v) < 0) S.times.push(v); S.times.sort(); S.timesTouched = true; S.edit._times = 1; render(); return;
+  }
+  if (el.id === 'copy') {
+    var start = addDays(monday(), S.week * 7), weeks = +document.getElementById('copyn').value, skipped = 0, done = 0;
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(start, i);
+      allTimes().forEach(function (tm) {
+        var n = curCap(key(d, tm));
+        for (var w = 1; w <= weeks; w++) {
+          var k2 = key(addDays(d, 7 * w), tm);
+          if (n < (S.booked[k2] || 0)) { skipped++; continue; }
+          if (curCap(k2) !== n) { setCell(k2, n); done++; }
+        }
+      });
+    }
+    S.msg = done + ' slot(s) copied – press Save. 已复制 ' + done + ' 个时段，请按保存。' + (skipped ? ' Skipped ' + skipped + ' (already booked) 跳过 ' + skipped + ' 个（已有预约）' : '');
+    render(); return;
+  }
+  if (el.id === 'save') {
+    var changes = Object.keys(S.edit).filter(function (k) { return k !== '_times'; }).map(function (k) { var p = k.split('|'); return { d: p[0], t: p[1], cap: S.edit[k] }; });
+    S.busy = true; S.err = ''; render();
+    sapi({ action: 'staff_avail_save', changes: changes, times: S.times }, function (j) {
+      S.busy = false;
+      if (j && j.ok) { S.edit = {}; S.timesTouched = false; apply(j); S.msg = 'Saved 已保存 ✓'; }
+      else S.err = errText(j);
+      render();
+    });
+  }
+});
+if (PIN) load(); else render();
+</script>
+</body>
+</html>

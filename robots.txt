@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /teachers.html
+Disallow: /calendar.html
+Disallow: /availability.html
+Disallow: /settings.html
+Disallow: /apps-script/
+Disallow: /test/

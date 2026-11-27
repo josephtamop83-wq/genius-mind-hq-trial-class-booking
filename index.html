@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book a Trial Class – Genius Mind Academy HQ</title>
+<meta name="description" content="Book a 1.5-hour Trial Class at Genius Mind Academy HQ.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+.hero{background:linear-gradient(135deg,#fb5f3b,#c2308a);color:#fff;border-radius:18px;padding:20px 18px;margin-bottom:16px}
+.hero h1{font-size:26px;line-height:1.15;margin:0 0 6px}
+.hero p{margin:0;font-size:14px;opacity:.95}
+.hero .pill{display:inline-block;background:rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700;margin:10px 6px 0 0}
+.bk{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.bk .when{font-weight:800;font-size:16px}
+.small{font-size:12.5px;color:var(--muted)}
+.wa{display:block;text-align:center;text-decoration:none;background:#25d366;color:#fff;border-radius:12px;padding:12px;font-weight:800;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main id="app"></main>
+<div class="bar" id="bar" hidden><div class="in"><button class="btn sec2" id="back"></button><button class="btn pri" id="next"></button></div></div>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+var MAX_KIDS = 3;
+var T = {
+ en: {
+  sub: 'Trial Class booking', hero: 'Book a Trial Class', hero_p: 'A 1.5-hour hands-on class for your child. Pick a date and time that suits you.',
+  pill_len: '1.5 hours', until: 'valid until', st: { Won: 'not used yet', Used: 'used', Expired: 'expired' }, steps: ['Login', 'Details', 'Date', 'Confirm'],
+  h_phone: 'Enter your mobile number', p_phone: 'We use it to find or save your booking.', phone: 'Mobile number', phone_ph: 'e.g. 012-3456789',
+  e_phone: 'Please enter a valid Malaysian mobile number.', checking: 'Checking…', e_net: 'Could not connect. Please check your internet and try again.',
+  e_noapi: 'The booking system is not connected yet.',
+  h_mine: 'Your Trial Class', welcome: 'Welcome back, {n}.', change: 'Change date / time', changes_left: 'Date changes left: {n}',
+  no_change: 'This booking can no longer be changed online. Please WhatsApp us.', spin_btn: '🎡 Spin & Win', spin_done: 'Your prize: {p}',
+  past: 'This class has passed.', new_bk: 'Book another Trial Class',
+  h_details: 'Parent & child details', parent: 'Parent name', email: 'Email', optional: '(optional)', child: 'Child', cname: "Child's name",
+  gender: 'Gender', male: 'Male', female: 'Female', age: 'Age', choose: 'Choose…', add: '+ Add another child', remove: 'Remove',
+  consent: 'I agree that Genius Mind Academy may collect and use my details to arrange this trial class and contact me about it (PDPA).',
+  e_parent: 'Please enter the parent name.', e_kids: "Please fill in each child's name, gender and age (3–15).", e_email: 'Please check the email address.', e_consent: 'Please tick the consent box.',
+  h_date: 'Pick a date & time', p_date: 'Booking closes {h} hours before each class.', avail: 'Available', full: 'Full', pick_date: 'Select a date to see the times.',
+  left: '{n} place(s) left', taken: 'Full', none_open: 'No dates are open yet. Please check again later or WhatsApp us.', e_slot: 'Please choose a date and time.',
+  h_confirm: 'Review & confirm', who: 'Parent', ph: 'Mobile', em: 'Email', kids: 'Children', when: 'Trial Class', fee: 'Fee',
+  confirm: 'Confirm booking', busy: 'Please wait…', next: 'Continue', back: 'Back', home: 'Home',
+  done: 'Booking confirmed!', done_p: 'See you on {d}. Please arrive 10 minutes early.', resched_done: 'Date changed!',
+  addr: 'Address', map: 'Open in Google Maps', wa: 'WhatsApp us', spin_cta: '🎡 Spin & Win a prize',
+  err: { full: 'Sorry, that time was just taken. Please choose another.', toolate: 'Booking for that time has closed. Please choose another.', closed: 'That time is not open. Please choose another.',
+    exists: 'This number already has an upcoming Trial Class. You can change its date instead.', limit: 'You have used all your date changes. Please WhatsApp us.',
+    locked_change: 'The class is too close to change online. Please WhatsApp us.', busy: 'The system is busy. Please try again.', kids: "Please complete your children's details." },
+  months: ['January','February','March','April','May','June','July','August','September','October','November','December'], dow: ['SUN','MON','TUE','WED','THU','FRI','SAT']
+ },
+ zh: {
+  sub: '试课预约', hero: '预约试课', hero_p: '为孩子安排 1.5 小时的体验课，请选择适合您的日期和时间。',
+  pill_len: '1.5 小时', until: '有效期至', st: { Won: '未使用', Used: '已使用', Expired: '已过期' }, steps: ['登入', '资料', '日期', '确认'],
+  h_phone: '请输入手机号码', p_phone: '我们用它来查找或保存您的预约。', phone: '手机号码', phone_ph: '例如 012-3456789',
+  e_phone: '请输入有效的马来西亚手机号码。', checking: '查询中…', e_net: '无法连接，请检查网络后再试。',
+  e_noapi: '预约系统尚未连接。',
+  h_mine: '您的试课', welcome: '欢迎回来，{n}。', change: '更改日期 / 时间', changes_left: '还可以改期 {n} 次',
+  no_change: '这个预约已经不能在网上更改，请 WhatsApp 联络我们。', spin_btn: '🎡 Spin & Win 转盘', spin_done: '您的奖品：{p}',
+  past: '这堂课已经过了。', new_bk: '再预约一次试课',
+  h_details: '家长和孩子资料', parent: '家长姓名', email: '电邮', optional: '（可不填）', child: '孩子', cname: '孩子姓名',
+  gender: '性别', male: '男', female: '女', age: '年龄', choose: '请选择…', add: '+ 添加孩子', remove: '删除',
+  consent: '我同意 Genius Mind Academy 为安排这次试课及联络我而收集和使用我的资料（PDPA）。',
+  e_parent: '请输入家长姓名。', e_kids: '请填写每位孩子的姓名、性别和年龄（3–15 岁）。', e_email: '请检查电邮地址。', e_consent: '请勾选同意。',
+  h_date: '选择日期和时间', p_date: '每堂课开始前 {h} 小时截止预约。', avail: '可预约', full: '已满', pick_date: '请先选日期，再选时间。',
+  left: '尚余 {n} 个名额', taken: '已满', none_open: '目前还没有开放日期，请稍后再看或 WhatsApp 联络我们。', e_slot: '请选择日期和时间。',
+  h_confirm: '确认资料', who: '家长', ph: '手机', em: '电邮', kids: '孩子', when: '试课', fee: '费用',
+  confirm: '确认预约', busy: '请稍候…', next: '继续', back: '返回', home: '首页',
+  done: '预约成功！', done_p: '{d} 见！请提早 10 分钟到。', resched_done: '日期已更改！',
+  addr: '地址', map: '打开 Google 地图', wa: 'WhatsApp 联络我们', spin_cta: '🎡 Spin & Win 转盘赢奖品',
+  err: { full: '抱歉，这个时段刚被订满，请选别的时间。', toolate: '这个时段已截止预约，请选别的时间。', closed: '这个时段没有开放，请选别的时间。',
+    exists: '这个号码已有一个未上的试课，您可以更改它的日期。', limit: '改期次数已用完，请 WhatsApp 联络我们。',
+    locked_change: '离上课时间太近，不能在网上改期，请 WhatsApp 联络我们。', busy: '系统忙碌，请再试一次。', kids: '请填好孩子资料。' },
+  months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'], dow: ['日','一','二','三','四','五','六']
+ }
+};
+var S = { lang: /^zh/i.test(navigator.language || '') ? 'zh' : 'en', stage: 'phone', phone: '', parent: '', email: '', kids: [{ name: '', gender: '', age: '' }],
+  consent: false, err: '', busy: false, info: null, slots: [], cutoff: 12, ready: true, month: '', date: '', time: '', resched: null, done: null, showBad: false };
+var app = document.getElementById('app');
+function t(k, v) { var s = T[S.lang][k]; if (v) for (var x in v) s = s.replace('{' + x + '}', v[x]); return s; }
+function fmtDate(k) {
+  var p = k.split('-'), w = weekday(k);
+  return S.lang === 'zh' ? (+p[0]) + '年' + (+p[1]) + '月' + (+p[2]) + '日（' + T.zh.dow[w] + '）' : T.en.dow[w].charAt(0) + T.en.dow[w].slice(1).toLowerCase() + ', ' + (+p[2]) + ' ' + T.en.months[+p[1] - 1].slice(0, 3) + ' ' + p[0];
+}
+function errOf(j) { if (!j) return t('e_net'); if (j.error === 'no_api') return t('e_noapi'); return T[S.lang].err[j.error] || t('e_net'); }
+function steps(cur) { return '<div class="steps">' + T[S.lang].steps.map(function (s, i) { return '<div class="st ' + (i < cur ? 'done' : i === cur ? 'cur' : '') + '"><div class="dot">' + (i < cur ? '✓' : i + 1) + '</div>' + s + '</div>'; }).join('') + '</div>'; }
+function bad(b) { return S.showBad && b ? ' class="err"' : ''; }
+function feeText() { return S.lang === 'zh' ? CFG.FEE_TEXT_ZH : CFG.FEE_TEXT_EN; }
+
+function render() {
+  document.documentElement.lang = S.lang === 'zh' ? 'zh' : 'en';
+  document.getElementById('hdr').innerHTML = headerHtml(t('sub'));
+  [].forEach.call(document.querySelectorAll('.lang button'), function (b) { b.classList.toggle('on', b.dataset.lang === S.lang); });
+  var bar = { show: false, back: '', next: '' }, h = '';
+  if (S.stage === 'phone') {
+    h = '<div class="hero"><h1>' + t('hero') + '</h1><p>' + t('hero_p') + '</p><span class="pill">⏱ ' + t('pill_len') + '</span><span class="pill">' + esc(feeText()) + '</span></div>' + steps(0) +
+      '<div class="card"><h3>' + t('h_phone') + '</h3><p class="small">' + t('p_phone') + '</p><label class="f">' + t('phone') + '</label><input type="tel" id="phone" inputmode="tel" autocomplete="tel" placeholder="' + t('phone_ph') + '" value="' + esc(S.phone) + '">' +
+      (S.err ? '<div class="msg">' + esc(S.err) + '</div>' : '') + '<button class="btn pri" id="go" style="width:100%;margin-top:12px"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? t('checking') : t('next')) + '</button></div>' + infoBox();
+  } else if (S.stage === 'mine') {
+    h = '<div class="head"><h2>' + t('h_mine') + '</h2>' + (S.info.parent ? '<p>' + t('welcome', { n: esc(S.info.parent) }) + '</p>' : '') + '</div>';
+    S.info.bookings.forEach(function (b) {
+      h += '<div class="card"><div class="bk"><div><div class="when">' + fmtDate(b.date) + '</div><div>' + esc(b.label) + '</div><div class="small">Ref ' + esc(b.ref) + '</div></div></div>';
+      if (b.past) h += '<div class="note">' + t('past') + '</div>';
+      else if (b.canChange) h += '<p class="small">' + t('changes_left', { n: b.maxChanges - b.changes }) + '</p><button class="btn sec2" style="width:100%" data-resched="' + esc(b.ref) + '">' + t('change') + '</button>';
+      else h += '<div class="note">' + t('no_change') + '</div>' + (CFG.WHATSAPP ? '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink('Hi, I would like to change my Trial Class ' + b.ref)) + '">' + t('wa') + '</a>' : '');
+      if (S.info.spinEnabled) h += b.spin ? '<div class="note info">' + t('spin_done', { p: esc(S.lang === 'zh' ? b.spin.prizeZh : b.spin.prize) }) + (b.spin.status !== 'No prize' ? ' · ' + esc(T[S.lang].st[b.spin.status] || b.spin.status) + (b.spin.expires ? ' · ' + t('until') + ' ' + esc(b.spin.expires) : '') + (b.spin.code ? ' · ' + esc(b.spin.code) : '') : '') + '</div>'
+        : '<button class="btn pri" style="width:100%;margin-top:10px" data-spin="' + esc(b.ref) + '">' + t('spin_btn') + '</button>';
+      h += '</div>';
+    });
+    if (S.err) h += '<div class="msg">' + esc(S.err) + '</div>';
+    if (S.info.bookings.every(function (b) { return b.past; })) h += '<button class="btn pri" id="newbk" style="width:100%">' + t('new_bk') + '</button>';
+    h += '<button class="btn sec2" id="home" style="width:100%;margin-top:10px">' + t('home') + '</button>';
+  } else if (S.stage === 'details') {
+    h = steps(1) + '<div class="head"><h2>' + t('h_details') + '</h2></div><div class="card">' +
+      '<label class="f">' + t('parent') + ' *</label><input type="text" id="parent" autocomplete="name" value="' + esc(S.parent) + '"' + bad(!S.parent.trim()) + '>' +
+      '<label class="f">' + t('phone') + '</label><input type="tel" value="' + esc(showPhone(S.phone)) + '" disabled>' +
+      '<label class="f">' + t('email') + ' <small>' + t('optional') + '</small></label><input type="email" id="email" autocomplete="email" value="' + esc(S.email) + '"></div>';
+    S.kids.forEach(function (c, i) {
+      h += '<div class="card child"><h4>' + t('child') + ' ' + (i + 1) + '</h4>' + (S.kids.length > 1 ? '<button class="rm" data-rm="' + i + '">' + t('remove') + '</button>' : '') +
+        '<label class="f">' + t('cname') + ' *</label><input type="text" data-c="' + i + '" data-k="name" value="' + esc(c.name) + '"' + bad(!c.name.trim()) + '>' +
+        '<div class="grid2"><div><label class="f">' + t('gender') + ' *</label><select data-c="' + i + '" data-k="gender"' + bad(!c.gender) + '><option value="">' + t('choose') + '</option><option value="M"' + (c.gender === 'M' ? ' selected' : '') + '>' + t('male') + '</option><option value="F"' + (c.gender === 'F' ? ' selected' : '') + '>' + t('female') + '</option></select></div>' +
+        '<div><label class="f">' + t('age') + ' *</label><input type="number" min="3" max="15" inputmode="numeric" data-c="' + i + '" data-k="age" value="' + esc(c.age) + '"' + bad(!(+c.age >= 3 && +c.age <= 15)) + '></div></div></div>';
+    });
+    h += '<button class="add" id="addkid"' + (S.kids.length >= MAX_KIDS ? ' disabled' : '') + '>' + t('add') + '</button>' +
+      '<label class="check"><input type="checkbox" id="consent"' + (S.consent ? ' checked' : '') + '><span>' + t('consent') + '</span></label>' + (S.err ? '<div class="msg">' + esc(S.err) + '</div>' : '');
+    bar = { show: true, back: t('back'), next: t('next') };
+  } else if (S.stage === 'date') {
+    h = (S.resched ? '' : steps(2)) + '<div class="head"><h2>' + t('h_date') + '</h2><p>' + t('p_date', { h: S.cutoff }) + '</p></div>';
+    if (S.busy && !S.slots.length) h += '<div class="card">' + t('busy') + '</div>';
+    else if (!S.slots.length) h += '<div class="note">' + t('none_open') + '</div>' + (CFG.WHATSAPP ? '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink()) + '">' + t('wa') + '</a>' : '');
+    else h += calendarHtml() + slotsHtml();
+    if (S.err) h += '<div class="msg">' + esc(S.err) + '</div>';
+    bar = { show: true, back: t('back'), next: S.resched ? (S.busy ? t('busy') : t('confirm')) : t('next') };
+  } else if (S.stage === 'confirm') {
+    h = steps(3) + '<div class="head"><h2>' + t('h_confirm') + '</h2></div><div class="card sum"><dl>' +
+      '<dt>' + t('when') + '</dt><dd>' + fmtDate(S.date) + '<br>' + slotLabel(S.time) + '</dd>' +
+      '<dt>' + t('who') + '</dt><dd>' + esc(S.parent) + '</dd><dt>' + t('ph') + '</dt><dd>' + esc(showPhone(S.phone)) + '</dd>' +
+      (S.email ? '<dt>' + t('em') + '</dt><dd>' + esc(S.email) + '</dd>' : '') +
+      '<dt>' + t('kids') + '</dt><dd>' + S.kids.map(function (c) { return esc(c.name) + ' (' + (c.gender === 'M' ? t('male') : t('female')) + ', ' + esc(c.age) + ')'; }).join('<br>') + '</dd>' +
+      '<dt>' + t('fee') + '</dt><dd>' + esc(feeText()) + '</dd></dl></div>' + (S.err ? '<div class="msg">' + esc(S.err) + '</div>' : '');
+    bar = { show: true, back: t('back'), next: S.busy ? t('busy') : t('confirm') };
+  } else if (S.stage === 'done') {
+    var d = S.done;
+    h = '<div class="card done-card"><div class="tick">✓</div><h2>' + (d.resched ? t('resched_done') : t('done')) + '</h2><div class="ref">' + esc(d.ref) + '</div>' +
+      '<div style="font-weight:800;font-size:17px">' + fmtDate(d.date) + '</div><div>' + esc(d.label) + '</div><p>' + t('done_p', { d: fmtDate(d.date) }) + '</p></div>' +
+      (S.info && S.info.spinEnabled !== false && !d.spun ? '<button class="btn pri" style="width:100%" data-spin="' + esc(d.ref) + '">' + t('spin_cta') + '</button>' : '') + infoBox() +
+      '<button class="btn sec2" id="home" style="width:100%;margin-top:10px">' + t('home') + '</button>';
+  }
+  app.innerHTML = h;
+  var b = document.getElementById('bar'); b.hidden = !bar.show;
+  document.getElementById('back').textContent = bar.back; document.getElementById('next').textContent = bar.next;
+  document.getElementById('next').disabled = S.busy;
+}
+function infoBox() {
+  var h = '';
+  if (CFG.ADDRESS) h += '<div><b>' + t('addr') + '</b><br>' + esc(CFG.ADDRESS) + '</div>' + (CFG.MAPS_URL ? '<a href="' + esc(CFG.MAPS_URL) + '" target="_blank" rel="noopener">📍 ' + t('map') + '</a>' : '');
+  if (CFG.WHATSAPP) h += '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink()) + '">' + t('wa') + '</a>';
+  return h ? '<div class="card" style="margin-top:12px">' + h + '</div>' : '';
+}
+function byDate() { var m = {}; S.slots.forEach(function (s) { (m[s.d] = m[s.d] || []).push(s); }); return m; }
+function calendarHtml() {
+  var m = byDate(), first = S.slots[0].d.slice(0, 7), last = S.slots[S.slots.length - 1].d.slice(0, 7);
+  if (!S.month || S.month < first) S.month = first; if (S.month > last) S.month = last;
+  var y = +S.month.slice(0, 4), mo = +S.month.slice(5, 7), start = S.month + '-01', wd = weekday(start), days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), today = myToday();
+  var h = '<div class="card cal"><div class="calhead"><button class="nav" data-mon="-1"' + (S.month <= first ? ' disabled' : '') + '>‹</button><h3>' + T[S.lang].months[mo - 1] + ' ' + y + '</h3><button class="nav" data-mon="1"' + (S.month >= last ? ' disabled' : '') + '>›</button></div>' +
+    '<div class="dow">' + T[S.lang].dow.map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div><div class="days">';
+  for (var i = 0; i < wd; i++) h += '<div></div>';
+  for (var dd = 1; dd <= days; dd++) {
+    var k = S.month + '-' + ('0' + dd).slice(-2), sl = m[k], open = sl && sl.some(function (s) { return s.left > 0; });
+    h += '<button class="day' + (k === S.date ? ' sel' : '') + (k === today ? ' today' : '') + '" data-date="' + k + '"' + (sl ? '' : ' disabled') + '>' + dd + (sl ? '<i class="' + (open ? 'ok' : 'full') + '"></i>' : '') + '</button>';
+  }
+  return h + '</div><div class="legend"><span><i style="background:var(--ok)"></i>' + t('avail') + '</span><span><i style="background:var(--bad)"></i>' + t('full') + '</span></div></div>';
+}
+function slotsHtml() {
+  if (!S.date) return '<p class="hint" style="text-align:center">' + t('pick_date') + '</p>';
+  var list = byDate()[S.date] || [];
+  return '<div class="sec">' + fmtDate(S.date) + '</div><div class="slots">' + list.map(function (s) {
+    var full = s.left <= 0;
+    return '<button class="slot' + (full ? ' taken' : '') + (s.t === S.time ? ' sel' : '') + '" data-time="' + s.t + '"' + (full ? ' disabled' : '') + '><b>' + esc(s.label) + '</b><span>' + (full ? t('taken') : t('left', { n: s.left })) + '</span></button>';
+  }).join('') + '</div>';
+}
+function loadSlots(cb) {
+  S.busy = true; render();
+  if (!CFG.API_URL) { S.busy = false; S.slots = []; S.err = t('e_noapi'); render(); return; }
+  apiGet('booked', function (j) {
+    S.busy = false;
+    if (j && j.ok) { S.slots = j.slots || []; S.cutoff = j.cutoffHours || 12; if (S.date && !byDate()[S.date]) { S.date = ''; S.time = ''; } }
+    else S.err = t('e_net');
+    render(); if (cb) cb();
+  });
+}
+function go(stage) { S.stage = stage; S.err = ''; render(); window.scrollTo(0, 0); }
+function validDetails() {
+  if (!S.parent.trim()) return t('e_parent');
+  if (S.kids.some(function (c) { return !c.name.trim() || !c.gender || !(+c.age >= 3 && +c.age <= 15); })) return t('e_kids');
+  if (S.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(S.email.trim())) return t('e_email');
+  if (!S.consent) return t('e_consent');
+  return '';
+}
+function goSpin(ref) {
+  try { sessionStorage.setItem('gma_hq_spin', JSON.stringify({ phone: S.phone, ref: ref })); } catch (x) {}
+  location.href = 'spin.html';
+}
+
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('button'); if (!el || el.disabled) return;
+  if (el.dataset.lang) { S.lang = el.dataset.lang; render(); return; }
+  if (el.dataset.spin) { goSpin(el.dataset.spin); return; }
+  if (el.dataset.mon) { var p = S.month.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1 + +el.dataset.mon, 1)); S.month = d.toISOString().slice(0, 7); render(); return; }
+  if (el.dataset.date) { S.date = el.dataset.date; S.time = ''; S.err = ''; render(); return; }
+  if (el.dataset.time) { S.time = el.dataset.time; S.err = ''; render(); return; }
+  if (el.dataset.resched) { S.resched = el.dataset.resched; S.date = ''; S.time = ''; go('date'); loadSlots(); return; }
+  if (el.id === 'addkid') { S.kids.push({ name: '', gender: '', age: '' }); render(); return; }
+  if (el.dataset.rm !== undefined) { S.kids.splice(+el.dataset.rm, 1); render(); return; }
+  if (el.id === 'home') { S = { lang: S.lang, stage: 'phone', phone: '', parent: '', email: '', kids: [{ name: '', gender: '', age: '' }], consent: false, err: '', busy: false, info: null, slots: [], cutoff: 12, month: '', date: '', time: '', resched: null, done: null }; go('phone'); return; }
+  if (el.id === 'newbk') { go('details'); return; }
+  if (el.id === 'go') {
+    var ph = normPhone(S.phone); if (!ph) { S.err = t('e_phone'); render(); return; }
+    S.err = ''; S.busy = true; render();
+    api({ action: 'lookup', phone: ph }, function (j) {
+      S.busy = false;
+      if (!j || !j.ok) { S.err = errOf(j); render(); return; }
+      S.phone = ph; S.info = j;
+      if (j.bookings && j.bookings.length) go('mine'); else go('details');
+    });
+    return;
+  }
+  if (el.id === 'back') {
+    if (S.stage === 'details') go('phone');
+    else if (S.stage === 'date') { var r = S.resched; S.resched = null; go(r ? 'mine' : 'details'); }
+    else if (S.stage === 'confirm') go('date');
+    return;
+  }
+  if (el.id === 'next') {
+    if (S.stage === 'details') { var er = validDetails(); if (er) { S.err = er; S.showBad = true; render(); return; } S.showBad = false; go('date'); loadSlots(); return; }
+    if (S.stage === 'date') {
+      if (!S.date || !S.time) { S.err = t('e_slot'); render(); return; }
+      if (!S.resched) { go('confirm'); return; }
+      S.busy = true; render();
+      api({ action: 'reschedule', phone: S.phone, ref: S.resched, date: S.date, time: S.time }, function (j) {
+        S.busy = false;
+        if (j && j.ok) { S.info.bookings = j.bookings; S.done = { ref: j.ref, date: j.date, label: j.label, resched: true, spun: true }; S.resched = null; go('done'); }
+        else { S.err = errOf(j); if (j && /full|toolate|closed/.test(j.error)) loadSlots(); else render(); }
+      });
+      return;
+    }
+    if (S.stage === 'confirm') {
+      S.busy = true; render();
+      api({ action: 'book', phone: S.phone, parent: S.parent.trim(), email: S.email.trim(), kids: S.kids.map(function (c) { return { name: c.name.trim(), gender: c.gender, age: +c.age }; }), date: S.date, time: S.time }, function (j) {
+        S.busy = false;
+        if (j && j.ok) { S.info = S.info || {}; S.info.bookings = j.bookings; S.done = { ref: j.ref, date: j.date, label: j.label }; go('done'); }
+        else if (j && /full|toolate|closed/.test(j.error)) { S.time = ''; go('date'); S.err = errOf(j); loadSlots(); }
+        else { S.err = errOf(j); render(); }
+      });
+    }
+  }
+});
+document.addEventListener('input', function (e) {
+  var el = e.target;
+  if (el.id === 'phone') S.phone = el.value; else if (el.id === 'parent') S.parent = el.value; else if (el.id === 'email') S.email = el.value;
+  else if (el.dataset.c !== undefined) S.kids[+el.dataset.c][el.dataset.k] = el.value;
+});
+document.addEventListener('change', function (e) {
+  var el = e.target;
+  if (el.id === 'consent') S.consent = el.checked;
+  else if (el.dataset.c !== undefined) S.kids[+el.dataset.c][el.dataset.k] = el.value;
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.id === 'phone') document.getElementById('go').click(); });
+render();
+</script>
+</body>
+</html>

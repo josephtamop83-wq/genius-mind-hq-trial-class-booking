@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>HQ Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="hdr"></div>
+<main id="app"></main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="staff.js"></script>
+<script>
+var S = { authed: false, err: '', msg: '', s: null, prizes: [], busy: false };
+var app = document.getElementById('app');
+document.getElementById('hdr').innerHTML = staffHeader('Settings 设置');
+var F = [
+  ['MAX_CHANGES', 'Date changes a parent may make per booking 家长每个预约最多可改期几次', 'number'],
+  ['LOCK_HOURS', 'Parents cannot change the date within this many hours of the class 开课前几小时内家长不能改期', 'number'],
+  ['CUTOFF_HOURS', 'Booking closes this many hours before the class 开课前几小时截止预约', 'number'],
+  ['NOTIFY_EMAIL', 'Email for new bookings / changes 新预约和改期通知邮箱 (comma separated 可多个，用逗号分开)', 'text'],
+  ['SPIN_ENABLED', 'Spin & Win open 开放转盘', 'yesno']
+];
+function render() {
+  if (!S.authed) { app.innerHTML = loginHtml(S.err); bindLogin(load); return; }
+  if (!S.s) { app.innerHTML = '<div class="card">Loading… 载入中</div>' + (S.err ? '<div class="msg">' + esc(S.err) + '</div>' : ''); return; }
+  var h = '<div class="head"><h2>Settings 设置</h2></div><div class="card">';
+  F.forEach(function (f) {
+    var v = S.s[f[0]] == null ? '' : S.s[f[0]];
+    h += '<label class="f">' + esc(f[1]) + '</label>' + (f[2] === 'yesno'
+      ? '<select data-k="' + f[0] + '"><option value="yes"' + (v === 'yes' ? ' selected' : '') + '>Yes 是</option><option value="no"' + (v === 'no' ? ' selected' : '') + '>No 否</option></select>'
+      : '<input type="' + (f[2] === 'number' ? 'number" min="0" max="720' : 'text') + '" data-k="' + f[0] + '" value="' + esc(v) + '">');
+  });
+  h += (S.err ? '<div class="msg">' + esc(S.err) + '</div>' : '') + (S.msg ? '<div class="note info">' + esc(S.msg) + '</div>' : '') +
+    '<button class="btn pri" id="save" style="width:100%;margin-top:14px"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Saving… 保存中' : 'Save 保存') + '</button></div>';
+  var tot = S.prizes.reduce(function (a, p) { return a + p.w; }, 0);
+  h += '<div class="card"><h3>Spin & Win prizes 转盘奖品</h3><p class="hint">Edit these in the Google Sheet, tab "Prizes" (weight = chance). 请在 Google Sheet 的 Prizes 标签修改（Weight = 机率）。</p>' +
+    '<table style="width:100%;font-size:13.5px;border-collapse:collapse">' + S.prizes.map(function (p) {
+      return '<tr style="border-top:1px solid var(--line)"><td style="padding:6px 0">' + esc(p.en) + '<br><small>' + esc(p.zh) + '</small></td><td style="text-align:right">' + (tot ? Math.round(p.w / tot * 1000) / 10 : 0) + '%</td><td style="text-align:right">' + (p.days ? p.days + ' days 天' : '-') + '</td></tr>';
+    }).join('') + '</table></div>';
+  app.innerHTML = h;
+}
+function load() {
+  S.authed = true; render();
+  sapi({ action: 'staff_settings' }, function (j) {
+    if (j && j.ok) { S.s = j.settings; S.prizes = j.prizes; S.err = ''; } else { S.err = errText(j); if (j && /auth|locked|disabled/.test(j.error)) S.authed = false; }
+    render();
+  });
+}
+document.addEventListener('input', function (e) { if (e.target.dataset.k) S.s[e.target.dataset.k] = e.target.value; });
+document.addEventListener('change', function (e) { if (e.target.dataset.k) S.s[e.target.dataset.k] = e.target.value; });
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('button'); if (!el || el.disabled) return;
+  if (el.id === 'save') {
+    S.busy = true; S.msg = ''; render();
+    sapi({ action: 'staff_settings_save', settings: S.s }, function (j) { S.busy = false; if (j && j.ok) { S.s = j.settings; S.msg = 'Saved 已保存 ✓'; S.err = ''; } else S.err = errText(j); render(); });
+  }
+});
+if (PIN) load(); else render();
+</script>
+</body>
+</html>

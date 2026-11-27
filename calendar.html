@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>HQ Booking Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+.day b.n{font-size:10px;background:var(--brand);color:#fff;border-radius:999px;padding:0 6px;line-height:16px}
+.bc{padding:12px 14px}
+.bc .top1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.bc .tm{font-weight:800;color:var(--plum)}
+.bc .nm{font-weight:800;font-size:16px}
+.bc .ph a{color:var(--brand-d);font-weight:800;text-decoration:none}
+.bc .kd{font-size:13.5px;margin:4px 0}
+.bc .meta{font-size:12px;color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.acts button,.acts a{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink);text-decoration:none}
+.acts button.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.acts button.off{background:var(--bad);border-color:var(--bad);color:#fff}
+.cx{opacity:.55}
+.cx .nm{text-decoration:line-through}
+.pz{background:#f4effb;border-radius:10px;padding:6px 10px;font-size:13px;margin-top:6px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tools .btn{flex:1;min-width:120px;padding:10px}
+.form{border:2px solid var(--brand)}
+@media print{header.top,.tools,.cal,.acts,.bar,.noprint{display:none!important}.bc{break-inside:avoid;border:1px solid #999}main{padding:0}body{background:#fff}.ph a{color:#000}}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main id="app"></main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="staff.js"></script>
+<script>
+var S = { authed: false, err: '', msg: '', month: myToday().slice(0, 7), date: myToday(), list: [], canEdit: false, times: [], form: null, move: null, busy: false };
+var app = document.getElementById('app');
+document.getElementById('hdr').innerHTML = staffHeader('Booking calendar 预约日历');
+var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function range() { var p = S.month.split('-'), a = new Date(Date.UTC(+p[0], +p[1] - 2, 1)), b = new Date(Date.UTC(+p[0], +p[1] + 1, 0)); return { from: a.toISOString().slice(0, 10), to: b.toISOString().slice(0, 10) }; }
+function load() {
+  S.authed = true; app.innerHTML = '<div class="card">Loading… 载入中</div>';
+  var r = range();
+  sapi({ action: 'cal_bookings', from: r.from, to: r.to }, function (j) {
+    if (!j || !j.ok) { S.err = errText(j); if (j && /auth|locked|disabled/.test(j.error)) S.authed = false; render(); return; }
+    S.list = j.bookings; S.canEdit = j.canEdit; S.err = '';
+    if (S.canEdit && !S.times.length) sapi({ action: 'staff_avail' }, function (a) { if (a && a.ok) { S.times = a.times; S.avail = a.slots; } render(); });
+    else render();
+  });
+}
+function active(b) { return b.status !== 'Cancelled'; }
+function render() {
+  if (!S.authed) { app.innerHTML = loginHtml(S.err); bindLogin(load); return; }
+  var h = '<div class="tools"><button class="btn sec2" id="today">Today 今天</button>' + (S.canEdit ? '<button class="btn pri" id="newbk">+ Book for parent 代订</button>' : '') + '<button class="btn sec2" id="print">🖨 Print day 打印</button></div>';
+  if (S.msg) h += '<div class="note info">' + esc(S.msg) + '</div>';
+  if (S.err) h += '<div class="msg">' + esc(S.err) + '</div>';
+  if (S.form) h += formHtml();
+  h += calHtml() + dayHtml();
+  app.innerHTML = h;
+}
+function calHtml() {
+  var y = +S.month.slice(0, 4), mo = +S.month.slice(5, 7), wd = weekday(S.month + '-01'), days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), cnt = {}, today = myToday();
+  S.list.forEach(function (b) { if (active(b)) cnt[b.date] = (cnt[b.date] || 0) + 1; });
+  var h = '<div class="card cal"><div class="calhead"><button class="nav" data-mon="-1">‹</button><h3>' + MON[mo - 1] + ' ' + y + '</h3><button class="nav" data-mon="1">›</button></div><div class="dow"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div><div class="days">';
+  for (var i = 0; i < wd; i++) h += '<div></div>';
+  for (var d = 1; d <= days; d++) { var k = S.month + '-' + ('0' + d).slice(-2); h += '<button class="day' + (k === S.date ? ' sel' : '') + (k === today ? ' today' : '') + '" data-date="' + k + '">' + d + (cnt[k] ? '<b class="n">' + cnt[k] + '</b>' : '') + '</button>'; }
+  return h + '</div></div>';
+}
+function dayHtml() {
+  var l = S.list.filter(function (b) { return b.date === S.date; }), act = l.filter(active), kids = act.reduce(function (a, b) { return a + b.n; }, 0);
+  var h = '<div class="sec">' + fmtD(S.date) + ' · ' + act.length + ' booking(s) 预约 · ' + kids + ' child(ren) 孩子</div>';
+  if (!l.length) return h + '<p class="hint">No bookings on this day. 当天没有预约。</p>';
+  l.forEach(function (b) {
+    var wa = 'https://wa.me/' + b.phone;
+    h += '<div class="card bc' + (active(b) ? '' : ' cx') + '"><div class="top1"><span class="tm">' + esc(b.label) + '</span><span class="meta">' + esc(b.ref) + (active(b) ? '' : ' · CANCELLED 已取消') + '</span></div>' +
+      '<div class="nm">' + esc(b.parent) + '</div><div class="ph"><a href="tel:+' + esc(b.phone) + '">📞 ' + esc(showPhone(b.phone)) + '</a> · <a href="' + esc(wa) + '" target="_blank" rel="noopener">WhatsApp</a></div>' +
+      '<div class="kd">👧 ' + esc(b.kids) + '</div>' + (b.email ? '<div class="meta">' + esc(b.email) + '</div>' : '') +
+      '<div class="meta">Booked by ' + esc(b.by) + ' · date changes 改期 ' + b.changes + (b.attendance ? ' · <b>' + esc(b.attendance) + '</b>' : '') + '</div>' + (b.notes ? '<div class="meta">📝 ' + esc(b.notes) + '</div>' : '');
+    if (b.spin) h += '<div class="pz">🎡 ' + esc(b.spin.prize) + ' · ' + esc(b.spin.status) + (b.spin.code ? ' · ' + esc(b.spin.code) : '') + (b.spin.expires ? ' · until ' + esc(b.spin.expires) : '') + '</div>';
+    if (S.canEdit) {
+      h += '<div class="acts">';
+      if (active(b)) {
+        h += '<button data-mark="attended" data-ref="' + esc(b.ref) + '" class="' + (b.attendance === 'Attended' ? 'on' : '') + '">✓ Came 出席</button>' +
+          '<button data-mark="noshow" data-ref="' + esc(b.ref) + '" class="' + (b.attendance === 'No show' ? 'off' : '') + '">✕ No show 缺席</button>' +
+          (b.attendance ? '<button data-mark="" data-ref="' + esc(b.ref) + '">Clear 清除</button>' : '') +
+          '<button data-move="' + esc(b.ref) + '">Change date 改期</button>' +
+          (b.spin && b.spin.status === 'Won' ? '<button data-redeem="' + esc(b.ref) + '">Prize given 已领奖</button>' : '') +
+          (b.spin && b.spin.status === 'Used' ? '<button data-unredeem="' + esc(b.ref) + '">Undo prize 撤回领奖</button>' : '') +
+          '<button data-cancel="' + esc(b.ref) + '">Cancel booking 取消</button>';
+      } else h += '<button data-uncancel="' + esc(b.ref) + '">Restore 恢复</button>';
+      h += '</div>';
+      if (S.move && S.move.ref === b.ref) h += moveHtml();
+    }
+    h += '</div>';
+  });
+  return h;
+}
+function timeOptions(sel) { return S.times.map(function (x) { return '<option value="' + x + '"' + (x === sel ? ' selected' : '') + '>' + slotLabel(x) + '</option>'; }).join('') + '<option value="other">Other time 其他…</option>'; }
+function moveHtml() {
+  return '<div class="noprint" style="margin-top:8px"><div class="grid2"><div><label class="f">New date 新日期</label><input type="date" id="mvd" value="' + esc(S.move.d || S.date) + '"></div><div><label class="f">Time 时间</label><select id="mvt">' + timeOptions(S.move.t) + '</select></div></div>' +
+    '<input type="time" id="mvo" style="display:none;margin-top:6px"><label class="check"><input type="checkbox" id="mvf"><span>Allow even if full 已满也照订</span></label>' +
+    '<div class="acts"><button id="mvok" class="on">Save change 保存</button><button id="mvx">Close 关闭</button></div></div>';
+}
+function formHtml() {
+  var f = S.form;
+  return '<div class="card form noprint"><h3>Book for a parent 老师代订</h3><p class="hint">No 12-hour cut-off for teachers. 老师代订不受 12 小时限制。</p>' +
+    '<label class="f">Parent name 家长姓名 *</label><input type="text" id="f_parent" value="' + esc(f.parent) + '">' +
+    '<label class="f">Mobile 手机 *</label><input type="tel" id="f_phone" value="' + esc(f.phone) + '" placeholder="012-3456789">' +
+    '<label class="f">Children 孩子 * <small>one per line: name, M/F, age 每行一位：姓名, M/F, 年龄</small></label><textarea id="f_kids" rows="3" style="width:100%;font:inherit;padding:10px;border:1.5px solid var(--line);border-radius:10px">' + esc(f.kids) + '</textarea>' +
+    '<div class="grid2"><div><label class="f">Date 日期 *</label><input type="date" id="f_date" value="' + esc(f.date || S.date) + '"></div><div><label class="f">Time 时间 *</label><select id="f_time">' + timeOptions(f.time) + '</select></div></div>' +
+    '<input type="time" id="f_other" style="display:none;margin-top:6px">' +
+    '<label class="f">Notes 备注</label><input type="text" id="f_notes" value="' + esc(f.notes) + '">' +
+    '<label class="check"><input type="checkbox" id="f_force"><span>Allow even if full 已满也照订</span></label>' +
+    (f.err ? '<div class="msg">' + esc(f.err) + '</div>' : '') +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec2" id="f_x">Close 关闭</button><button class="btn pri" id="f_ok"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Saving…' : 'Book 预订') + '</button></div></div>';
+}
+function parseKids(txt) {
+  var out = [], ok = true;
+  String(txt || '').split('\n').forEach(function (line) {
+    if (!line.trim()) return;
+    var p = line.split(',').map(function (x) { return x.trim(); }), g = (p[1] || '').toUpperCase().charAt(0);
+    if (!p[0] || (g !== 'M' && g !== 'F') || !(+p[2] >= 3 && +p[2] <= 15)) ok = false;
+    out.push({ name: p[0], gender: g, age: +p[2] });
+  });
+  return ok && out.length ? out : null;
+}
+function pickTime(selId, otherId) { var v = document.getElementById(selId).value; return v === 'other' ? document.getElementById(otherId).value : v; }
+function after(j, msg) { S.busy = false; if (j && j.ok) { S.msg = msg; S.err = ''; load(); } else { S.err = errText(j); render(); } }
+function readForm() { if (!S.form) return; ['parent', 'phone', 'kids', 'notes', 'date'].forEach(function (k) { var e = document.getElementById('f_' + k); if (e) S.form[k] = e.value; }); }
+document.addEventListener('change', function (e) {
+  if (e.target.id === 'mvt') document.getElementById('mvo').style.display = e.target.value === 'other' ? 'block' : 'none';
+  if (e.target.id === 'f_time') { readForm(); S.form.time = e.target.value; document.getElementById('f_other').style.display = e.target.value === 'other' ? 'block' : 'none'; }
+});
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('button'); if (!el || el.disabled || !S.authed) return;
+  if (el.dataset.mon) { var p = S.month.split('-'); S.month = new Date(Date.UTC(+p[0], +p[1] - 1 + +el.dataset.mon, 1)).toISOString().slice(0, 7); S.date = S.month + '-01'; load(); return; }
+  if (el.dataset.date) { S.date = el.dataset.date; S.move = null; render(); return; }
+  if (el.id === 'today') { var tk = myToday(); S.date = tk; if (S.month !== tk.slice(0, 7)) { S.month = tk.slice(0, 7); load(); } else render(); return; }
+  if (el.id === 'print') { window.print(); return; }
+  if (el.id === 'newbk') { S.form = { parent: '', phone: '', kids: '', notes: '', date: S.date, time: S.times[0] || '' }; render(); window.scrollTo(0, 0); return; }
+  if (el.id === 'f_x') { S.form = null; render(); return; }
+  if (el.id === 'f_ok') {
+    readForm(); var f = S.form, kids = parseKids(f.kids), ph = normPhone(f.phone), tm = pickTime('f_time', 'f_other');
+    if (!f.parent.trim() || !ph || !kids || !f.date || !/^\d{2}:\d{2}$/.test(tm)) { f.err = 'Please fill in name, a valid mobile, children (name, M/F, age) and date/time. 请填好所有必填资料。'; render(); return; }
+    S.busy = true; render();
+    sapi({ action: 'staff_book', parent: f.parent.trim(), phone: ph, kids: kids, date: f.date, time: tm, notes: f.notes, force: document.getElementById('f_force').checked }, function (j) {
+      if (j && j.ok) { S.form = null; S.date = j.date; S.month = j.date.slice(0, 7); } else if (S.form) S.form.err = errText(j);
+      after(j, j && j.ok ? 'Booked 已预订 ' + j.ref : '');
+    });
+    return;
+  }
+  if (el.dataset.mark !== undefined) { sapi({ action: 'cal_mark', ref: el.dataset.ref, value: el.dataset.mark }, function (j) { after(j, ''); }); return; }
+  if (el.dataset.move) { S.move = { ref: el.dataset.move }; render(); return; }
+  if (el.id === 'mvx') { S.move = null; render(); return; }
+  if (el.id === 'mvok') {
+    var d = document.getElementById('mvd').value, tm2 = pickTime('mvt', 'mvo');
+    if (!d || !/^\d{2}:\d{2}$/.test(tm2)) return;
+    sapi({ action: 'staff_reschedule', ref: S.move.ref, date: d, time: tm2, force: document.getElementById('mvf').checked }, function (j) { var r = S.move.ref; if (j && j.ok) { S.move = null; S.date = d; S.month = d.slice(0, 7); } after(j, j && j.ok ? r + ' moved 已改到 ' + fmtD(d) + ' ' + slotLabel(tm2) : ''); });
+    return;
+  }
+  if (el.dataset.cancel) { if (!confirmOnce(el, 'Tap again to cancel 再按一次确认取消')) return; sapi({ action: 'staff_cancel', ref: el.dataset.cancel }, function (j) { after(j, 'Cancelled 已取消 (row kept in Sheet 资料仍保留)'); }); return; }
+  if (el.dataset.uncancel) { sapi({ action: 'staff_cancel', ref: el.dataset.uncancel, undo: true }, function (j) { after(j, 'Restored 已恢复'); }); return; }
+  if (el.dataset.redeem) { sapi({ action: 'staff_redeem', ref: el.dataset.redeem }, function (j) { after(j, 'Prize marked as given 已领奖'); }); return; }
+  if (el.dataset.unredeem) { sapi({ action: 'staff_redeem', ref: el.dataset.unredeem, undo: true }, function (j) { after(j, 'Prize undone 已撤回'); }); return; }
+});
+function confirmOnce(el, txt) { if (el.dataset.sure) return true; el.dataset.sure = 1; el.textContent = txt; el.classList.add('off'); return false; }
+if (PIN) load(); else render();
+</script>
+</body>
+</html>

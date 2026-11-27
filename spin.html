@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin &amp; Win – Genius Mind Academy HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+.wheelbox{position:relative;width:min(88vw,360px);margin:6px auto 14px}
+.wclip{overflow:hidden;border-radius:50%}
+.wheelbox canvas{width:100%;height:auto;display:block;transition:transform 5s cubic-bezier(.17,.67,.12,1)}
+.pointer{position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid var(--plum);z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.title{font-family:Fredoka,sans-serif;font-weight:700;font-size:34px;color:#f7941d;text-align:center;margin:4px 0}
+.prize{font-family:Fredoka,sans-serif;font-size:26px;color:var(--brand);margin:6px 0}
+.code{font-size:22px;letter-spacing:.12em;font-weight:800;color:var(--plum)}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main id="app"></main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+var T = {
+ en: { sub: 'Spin & Win', p: 'One spin for each Trial Class booking.', phone: 'Mobile number used for your booking', phone_ph: 'e.g. 012-3456789', cont: 'Continue',
+  spin: 'SPIN!', spinning: 'Spinning…', e_phone: 'Please enter a valid Malaysian mobile number.', e_net: 'Could not connect. Please try again.',
+  nobk: 'We could not find a Trial Class booking for this number. Please book first.', book: 'Book a Trial Class', kids: "Please complete your children's details before you spin.",
+  off: 'Spin & Win is not open right now.', won: 'You won', nowin: 'Thank you for joining!', code: 'Prize code', exp: 'Valid until', status: 'Status',
+  show: 'Show this screen to our teacher on your Trial Class day.', already: 'You have already spun for this booking.', back: 'Back to my booking',
+  st: { Won: 'Not used yet', Used: 'Used', Expired: 'Expired', 'No prize': '-' } },
+ zh: { sub: 'Spin & Win 转盘', p: '每个试课预约可以转一次。', phone: '预约时用的手机号码', phone_ph: '例如 012-3456789', cont: '继续',
+  spin: '转！', spinning: '转动中…', e_phone: '请输入有效的马来西亚手机号码。', e_net: '无法连接，请再试一次。',
+  nobk: '找不到这个号码的试课预约，请先预约。', book: '预约试课', kids: '转盘前请先填好孩子资料。',
+  off: 'Spin & Win 目前没有开放。', won: '恭喜您获得', nowin: '谢谢参与！', code: '奖品编号', exp: '有效期至', status: '状态',
+  show: '试课当天请把这个画面给老师看。', already: '这个预约已经转过了。', back: '回到我的预约',
+  st: { Won: '未使用', Used: '已使用', Expired: '已过期', 'No prize': '-' } }
+};
+var S = { lang: /^zh/i.test(navigator.language || '') ? 'zh' : 'en', phone: '', ref: '', prizes: [], enabled: true, err: '', busy: false, result: null, stage: 'load', rot: 0 };
+try { var ss = JSON.parse(sessionStorage.getItem('gma_hq_spin') || 'null'); if (ss) { S.phone = ss.phone; S.ref = ss.ref; } } catch (x) {}
+var app = document.getElementById('app'), COLORS = ['#fb5f3b', '#f5c431', '#6aa61f', '#2f9bd9', '#c2308a', '#a58bc2', '#f7941d', '#4b0f42'];
+function t(k) { return T[S.lang][k]; }
+function pname(p) { return S.lang === 'zh' ? p.zh : p.en; }
+function render() {
+  document.documentElement.lang = S.lang;
+  document.getElementById('hdr').innerHTML = headerHtml(t('sub'));
+  [].forEach.call(document.querySelectorAll('.lang button'), function (b) { b.classList.toggle('on', b.dataset.lang === S.lang); });
+  var h = '<div class="title">SPIN &amp; WIN</div><p class="hint" style="text-align:center">' + t('p') + '</p>';
+  if (S.stage === 'load') h += '<div class="card">…</div>';
+  else if (!S.enabled || !S.prizes.length) h += '<div class="note">' + t('off') + '</div>';
+  else if (S.stage === 'phone') {
+    h += '<div class="card"><label class="f">' + t('phone') + '</label><input type="tel" id="phone" placeholder="' + t('phone_ph') + '" value="' + esc(S.phone) + '">' +
+      (S.err ? '<div class="msg">' + S.err + '</div>' : '') + '<button class="btn pri" id="go" style="width:100%;margin-top:12px"' + (S.busy ? ' disabled' : '') + '>' + t('cont') + '</button></div>';
+  } else {
+    h += '<div class="wheelbox"><div class="pointer"></div><div class="wclip"><canvas id="wheel" width="720" height="720" style="transform:rotate(' + S.rot + 'deg)"></canvas></div></div>';
+    if (S.result && S.stage === 'done') h += resultHtml();
+    else h += (S.err ? '<div class="msg">' + S.err + '</div>' : '') + '<button class="btn pri" id="spin" style="width:100%;font-size:20px"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? t('spinning') : t('spin')) + '</button>';
+  }
+  h += '<a class="btn sec2" style="display:block;text-align:center;text-decoration:none;margin-top:12px" href="index.html">' + t('back') + '</a>';
+  app.innerHTML = h;
+  if (document.getElementById('wheel')) draw();
+}
+function resultHtml() {
+  var r = S.result.spin, p = S.prizes.filter(function (x) { return x.en === r.prize; })[0] || { en: r.prize, zh: r.prize };
+  var win = r.status !== 'No prize';
+  return '<div class="card done-card">' + (S.result.already ? '<p class="hint">' + t('already') + '</p>' : '') +
+    (win ? '<div>' + t('won') + '</div><div class="prize">🎉 ' + esc(pname(p)) + '</div>' +
+      (r.code ? '<div class="hint">' + t('code') + '</div><div class="code">' + esc(r.code) + '</div>' : '') +
+      (r.expires ? '<p>' + t('exp') + ' <b>' + esc(r.expires) + '</b></p>' : '') + '<p>' + t('status') + ': <b>' + esc(T[S.lang].st[r.status] || r.status) + '</b></p><p><b>' + t('show') + '</b></p>'
+      : '<div class="prize">' + esc(pname(p)) + '</div><p>' + t('nowin') + '</p>') + '</div>';
+}
+function draw() {
+  var c = document.getElementById('wheel'), x = c.getContext('2d'), n = S.prizes.length, R = 350, a = 2 * Math.PI / n;
+  x.clearRect(0, 0, 720, 720); x.save(); x.translate(360, 360);
+  for (var i = 0; i < n; i++) {
+    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, -Math.PI / 2 + i * a, -Math.PI / 2 + (i + 1) * a); x.closePath();
+    x.fillStyle = COLORS[i % COLORS.length]; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 6; x.stroke();
+    x.save(); x.rotate(-Math.PI / 2 + (i + .5) * a); x.fillStyle = '#fff'; x.font = 'bold 34px Nunito, sans-serif'; x.textAlign = 'right'; x.textBaseline = 'middle';
+    var txt = pname(S.prizes[i]); if (txt.length > 16) txt = txt.slice(0, 15) + '…';
+    x.fillText(txt, R - 26, 0); x.restore();
+  }
+  x.beginPath(); x.arc(0, 0, 46, 0, 2 * Math.PI); x.fillStyle = '#fff'; x.fill(); x.restore();
+}
+function doSpin() {
+  S.busy = true; S.err = ''; render();
+  api({ action: 'spin', phone: S.phone, ref: S.ref }, function (j) {
+    if (!j || !j.ok) {
+      S.busy = false;
+      S.err = !j ? t('e_net') : j.error === 'kids' ? t('kids') : j.error === 'notfound' ? t('nobk') : j.error === 'spin_off' ? t('off') : t('e_net');
+      render(); return;
+    }
+    S.result = j;
+    var n = S.prizes.length, seg = 360 / n, idx = j.index >= 0 ? j.index : 0;
+    var target = 360 - (idx + .5) * seg + (Math.random() - .5) * seg * .6;   // land the pointer inside the won slice
+    S.rot = S.rot - (S.rot % 360) + 360 * (j.already ? 1 : 6) + target;
+    var cv = document.getElementById('wheel'); cv.style.transform = 'rotate(' + S.rot + 'deg)';
+    setTimeout(function () { S.busy = false; S.stage = 'done'; render(); }, j.already ? 600 : 5200);
+  });
+}
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('button'); if (!el || el.disabled) return;
+  if (el.dataset.lang) { S.lang = el.dataset.lang; render(); return; }
+  if (el.id === 'spin') { doSpin(); return; }
+  if (el.id === 'go') {
+    var ph = normPhone(S.phone); if (!ph) { S.err = t('e_phone'); render(); return; }
+    S.busy = true; S.err = ''; render();
+    api({ action: 'lookup', phone: ph }, function (j) {
+      S.busy = false;
+      if (!j || !j.ok) { S.err = t('e_net'); render(); return; }
+      var b = (j.bookings || []).filter(function (x) { return !x.spin; })[0] || (j.bookings || [])[0];
+      if (!b) { S.err = t('nobk') + ' <a href="index.html">' + t('book') + '</a>'; render(); return; }
+      S.phone = ph; S.ref = b.ref; S.stage = 'wheel'; render();
+      if (b.spin) doSpin();   // shows the saved result
+    });
+  }
+});
+document.addEventListener('input', function (e) { if (e.target.id === 'phone') S.phone = e.target.value; });
+render();
+apiGet('prizes', function (j) {
+  if (j && j.ok) { S.prizes = j.prizes || []; S.enabled = j.enabled; } else { S.prizes = []; S.enabled = false; }
+  S.stage = S.phone && S.ref ? 'wheel' : 'phone'; render();
+});
+</script>
+</body>
+</html>
