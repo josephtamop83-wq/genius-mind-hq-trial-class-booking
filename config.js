@@ -1,6 +1,6 @@
 /* Genius Mind HQ – public settings for the pages. No personal data, PINs or tokens here. */
 var CFG = {
-  API_URL: '',                       // paste the HQ Apps Script web-app URL (…/exec) here after deploying
+  API_URL: 'https://script.google.com/macros/s/AKfycbwcOYAvskuO7YluEfcxenxrxuJ5f1UGvrA0fpIGVIF99eeRtK1kMm1TAIe63glyCgk/exec',
   NAME: 'Genius Mind Academy HQ',
   NAME_ZH: 'Genius Mind Academy 总部',
   ADDRESS: '',                       // TODO: HQ address
